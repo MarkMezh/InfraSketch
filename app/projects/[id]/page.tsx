@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { FileCode, Plus, Server, Database, HardDrive, Trash2, Download, Eye, Edit, ArrowRight } from "lucide-react"
+import { use } from "react"
 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
@@ -281,12 +282,9 @@ const mockProjects = {
   },
 }
 
-// Remove the React.use() approach and go back to directly accessing params.id
-// At the top of the file, keep the React import
-// Replace the unwrapping of params with a direct access approach
 export default function ProjectPage({ params }: { params: { id: string } }) {
-  // Use params.id directly instead of unwrapping with React.use()
   const router = useRouter()
+  const unwrappedParams = use(params)
   const [projectName, setProjectName] = useState("")
   const [projectDescription, setProjectDescription] = useState("")
   const [projectEnvironment, setProjectEnvironment] = useState("production")
@@ -303,19 +301,18 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false)
   const [resourceToDelete, setResourceToDelete] = useState<string | null>(null)
 
-  // Continue using params.id directly in the useEffect and throughout the component
   useEffect(() => {
     setLoading(true)
     setError(null)
 
     try {
       // Check if this is one of the built-in projects (1-5)
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
 
       if (isBuiltInProject) {
         // Use mock data for built-in projects
-        const mockProjectData = mockProjects[params.id as keyof typeof mockProjects]
-        const mockProjectResources = mockResources[params.id as keyof typeof mockResources] || []
+        const mockProjectData = mockProjects[unwrappedParams.id as keyof typeof mockProjects]
+        const mockProjectResources = mockResources[unwrappedParams.id as keyof typeof mockResources] || []
 
         setProjectName(mockProjectData.name)
         setProjectDescription(mockProjectData.description)
@@ -324,7 +321,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         setProjectRegion(mockProjectData.region)
         setResources(mockProjectResources)
         setProject({
-          id: params.id,
+          id: unwrappedParams.id,
           ...mockProjectData,
           resources: mockProjectResources,
         })
@@ -333,7 +330,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         const storedProjects = localStorage.getItem("terraformProjects")
         if (storedProjects) {
           const parsedProjects = JSON.parse(storedProjects)
-          const foundProject = parsedProjects.find((p: any) => p.id === params.id)
+          const foundProject = parsedProjects.find((p: any) => p.id === unwrappedParams.id)
 
           if (foundProject) {
             setProject(foundProject)
@@ -356,41 +353,35 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
+  }, [unwrappedParams.id])
 
   const handleEditResource = (resource: any) => {
     setEditingResource(resource)
     setEditFormType(resource.type)
   }
 
-  // Update the handleUpdateResource function
   const handleUpdateResource = (updatedResource: any) => {
     try {
-      // Check if editingResource is null or undefined
       if (!editingResource) {
         console.error("Error: No resource is currently being edited")
         alert("Error updating resource: No resource selected for editing")
         return
       }
 
-      // Ensure the updated resource has the correct ID
       const resourceWithId = {
         ...updatedResource,
         id: editingResource.id,
       }
 
-      // Update the resources array
       const updatedResources = resources.map((r) => (r.id === editingResource.id ? resourceWithId : r))
 
       setResources(updatedResources)
 
-      // Only update localStorage for custom projects
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
       if (!isBuiltInProject) {
         updateProjectInStorage(updatedResources)
       }
 
-      // Clear the editing state
       setEditingResource(null)
       setEditFormType(null)
     } catch (error) {
@@ -399,13 +390,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
   }
 
-  // Update the handleDeleteResource function
   const handleDeleteResource = (resourceId: string) => {
     try {
-      // Get the resource to check if it's the first VPC
       const resourceToDelete = resources.find((r) => r.id === resourceId)
-
-      // Check if any resources depend on this one
       const hasDependents = resources.some(
         (r) =>
           (r.dependencies && r.dependencies.includes(resourceId)) ||
@@ -422,13 +409,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         return
       }
 
-      // Check if this is a built-in project
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
-
-      // Remove the resource
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
       const updatedResources = resources.filter((r) => r.id !== resourceId)
-
-      // Remove any dependencies on this resource
       const cleanedResources = updatedResources.map((resource) => ({
         ...resource,
         dependencies: resource.dependencies
@@ -439,17 +421,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           : [],
       }))
 
-      // Update the state
       setResources(cleanedResources)
 
-      // For custom projects, update localStorage
       if (!isBuiltInProject) {
         updateProjectInStorage(cleanedResources)
       }
 
       console.log("Resource deleted:", resourceId)
-
-      // Close the delete alert dialog
       setDeleteAlertOpen(false)
       setResourceToDelete(null)
     } catch (error) {
@@ -458,10 +436,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
   }
 
-  // Update the handleUpdateProject function
   const handleUpdateProject = () => {
     try {
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
 
       if (isBuiltInProject) {
         alert("Cannot update built-in project settings. Please create a new project instead.")
@@ -470,7 +447,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
       const updatedProject = {
         ...(project || {}),
-        id: params.id,
+        id: unwrappedParams.id,
         name: projectName,
         description: projectDescription,
         environment: projectEnvironment,
@@ -480,9 +457,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         updatedAt: "Just now",
       }
 
-      // Update localStorage
       const storedProjects = JSON.parse(localStorage.getItem("terraformProjects") || "[]")
-      const projectIndex = storedProjects.findIndex((p: any) => p.id === params.id)
+      const projectIndex = storedProjects.findIndex((p: any) => p.id === unwrappedParams.id)
 
       if (projectIndex !== -1) {
         storedProjects[projectIndex] = updatedProject
@@ -500,27 +476,20 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
   }
 
-  // Update the handleDeleteProject function
   const handleDeleteProject = () => {
     try {
-      // Check if this is a built-in project
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
 
       if (isBuiltInProject) {
         alert("Cannot delete built-in projects. Please create and delete your own projects.")
         return
       }
 
-      // Delete project from localStorage
       const storedProjects = JSON.parse(localStorage.getItem("terraformProjects") || "[]")
-      const updatedProjects = storedProjects.filter((p: any) => p.id !== params.id)
+      const updatedProjects = storedProjects.filter((p: any) => p.id !== unwrappedParams.id)
 
-      // Save the updated projects list
       localStorage.setItem("terraformProjects", JSON.stringify(updatedProjects))
-
-      console.log("Project deleted:", params.id)
-
-      // Redirect to projects page
+      console.log("Project deleted:", unwrappedParams.id)
       router.push("/projects")
     } catch (error) {
       console.error("Error deleting project:", error)
@@ -528,11 +497,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
   }
 
-  // Update the helper function to use projectId
   const updateProjectInStorage = (updatedResources: any[]) => {
     try {
       const storedProjects = JSON.parse(localStorage.getItem("terraformProjects") || "[]")
-      const projectIndex = storedProjects.findIndex((p: any) => p.id === params.id)
+      const projectIndex = storedProjects.findIndex((p: any) => p.id === unwrappedParams.id)
 
       if (projectIndex !== -1) {
         storedProjects[projectIndex].resources = updatedResources
@@ -583,13 +551,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     return resources.find((resource) => resource.id === id)
   }
 
-  // Add a function to get resource name by ID
   const getResourceNameById = (id: string) => {
     const resource = resources.find((r) => r.id === id)
     return resource ? resource.name : "Unknown"
   }
 
-  // Add a function to get resources that depend on a given resource
   const getDependentResources = (resourceId: string) => {
     return resources.filter(
       (r) =>
@@ -598,14 +564,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     )
   }
 
-  // Get all dependencies (both automatic and custom)
   const getAllDependencies = (resource: any) => {
     const allDeps = [...(resource.dependencies || []), ...(resource.customDependencies || [])]
-    return [...new Set(allDeps)] // Remove duplicates
+    return [...new Set(allDeps)]
   }
 
   const renderDependencyView = () => {
-    // Group dependencies by source resource
     const dependencyGroups: Record<string, string[]> = {}
 
     resources.forEach((resource) => {
@@ -666,7 +630,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     )
   }
 
-  // Function to get environment color
   const getEnvironmentColor = (env: string) => {
     switch (env) {
       case "development":
@@ -715,7 +678,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     )
   }
 
-  // Update the return JSX to use projectId instead of params.id
   return (
     <div className="container py-10 h-screen">
       <div className="flex items-center justify-between mb-8">
@@ -725,13 +687,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           <h1 className="text-3xl font-bold">{projectName}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/projects/${params.id}/preview`}>
+          <Link href={`/projects/${unwrappedParams.id}/preview`}>
             <Button variant="outline">
               <Eye className="mr-2 h-4 w-4" />
               Preview Code
             </Button>
           </Link>
-          <Link href={`/projects/${params.id}/download`}>
+          <Link href={`/projects/${unwrappedParams.id}/download`}>
             <Button>
               <Download className="mr-2 h-4 w-4" />
               Download
@@ -758,7 +720,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   <Button variant="outline" onClick={() => setShowDependencyView(true)}>
                     View Dependencies
                   </Button>
-                  <Link href={`/projects/${params.id}/add-resource`}>
+                  <Link href={`/projects/${unwrappedParams.id}/add-resource`}>
                     <Button>
                       <Plus className="mr-2 h-4 w-4" />
                       Add Resource
@@ -767,11 +729,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              {/* Rest of the JSX remains the same, just update any instances of params.id to projectId */}
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {resources.map((resource) => (
                   <Card key={resource.id}>
-                    {/* Card content remains the same */}
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{resource.name}</CardTitle>
@@ -789,7 +749,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           </div>
                         ))}
 
-                        {/* Show dependencies */}
                         {getAllDependencies(resource).length > 0 && (
                           <div className="mt-3 pt-2 border-t">
                             <p className="text-xs text-muted-foreground mb-1">Dependencies:</p>
@@ -814,7 +773,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                           </div>
                         )}
 
-                        {/* Show dependent resources */}
                         {getDependentResources(resource.id).length > 0 && (
                           <div className="mt-3 pt-2 border-t">
                             <p className="text-xs text-muted-foreground mb-1">Used by:</p>
@@ -938,7 +896,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                         </DialogContent>
                       </Dialog>
 
-                      {/* Only show delete button if it's NOT the first VPC AND it has no dependents */}
                       {!resource.isFirstVPC && getDependentResources(resource.id).length === 0 && (
                         <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
                           <AlertDialogTrigger asChild>
@@ -958,7 +915,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                               <AlertDialogTitle>Delete Resource</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Are you sure you want to delete this project? This action cannot be undone.
-                                {["1", "2", "3", "4", "5"].includes(params.id) && (
+                                {["1", "2", "3", "4", "5"].includes(unwrappedParams.id) && (
                                   <div className="mt-2 font-semibold text-amber-500">
                                     Note: Built-in projects cannot be deleted.
                                   </div>
@@ -991,7 +948,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                   </Card>
                 ))}
 
-                <Link href={`/projects/${params.id}/add-resource`} className="block">
+                <Link href={`/projects/${unwrappedParams.id}/add-resource`} className="block">
                   <Card className="flex flex-col items-center justify-center p-8 border-dashed h-full transition-colors hover:border-primary hover:bg-muted/50">
                     <Plus className="h-8 w-8 text-muted-foreground mb-4" />
                     <h3 className="text-xl font-medium mb-2">Add Resource</h3>
@@ -1002,7 +959,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 </Link>
               </div>
 
-              {/* DependencyGraph component */}
               <div className="mt-8">
                 <DependencyGraph
                   resources={resources.map((r) => ({

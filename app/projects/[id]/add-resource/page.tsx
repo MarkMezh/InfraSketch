@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Server, Database, HardDrive, FileCode } from "lucide-react"
+import { use } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -215,34 +216,29 @@ const mockResources = {
   ],
 }
 
-// Remove the React.use() approach and go back to directly accessing params.id
-// At the top of the file, keep the React import
-
-// Replace the unwrapping of params with a direct access approach
 export default function AddResourcePage({ params }: { params: { id: string } }) {
-  // Use params.id directly instead of unwrapping with React.use()
   const router = useRouter()
+  const unwrappedParams = use(params)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [resources, setResources] = useState<any[]>([])
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Continue using params.id directly in the useEffect and throughout the component
   useEffect(() => {
     setLoading(true)
     setError(null)
 
     try {
       // Check if this is one of the built-in projects (1-5)
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
 
       if (isBuiltInProject) {
         // Use mock data for built-in projects
-        const mockProjectResources = mockResources[params.id as keyof typeof mockResources] || []
+        const mockProjectResources = mockResources[unwrappedParams.id as keyof typeof mockResources] || []
         setResources(mockProjectResources)
         setProject({
-          id: params.id,
+          id: unwrappedParams.id,
           resources: mockProjectResources,
         })
         setLoading(false)
@@ -253,7 +249,7 @@ export default function AddResourcePage({ params }: { params: { id: string } }) 
       const storedProjects = localStorage.getItem("terraformProjects")
       if (storedProjects) {
         const parsedProjects = JSON.parse(storedProjects)
-        const foundProject = parsedProjects.find((p: any) => p.id === params.id)
+        const foundProject = parsedProjects.find((p: any) => p.id === unwrappedParams.id)
 
         if (foundProject) {
           setProject(foundProject)
@@ -270,9 +266,8 @@ export default function AddResourcePage({ params }: { params: { id: string } }) 
     } finally {
       setLoading(false)
     }
-  }, [params.id])
+  }, [unwrappedParams.id])
 
-  // Update the handleSave function
   const handleSave = (data: any) => {
     if (!project) {
       alert("Project not found. Please try again.")
@@ -280,40 +275,32 @@ export default function AddResourcePage({ params }: { params: { id: string } }) 
     }
 
     try {
-      // Generate a new ID for the resource
       const newResource = {
         ...data,
-        id: "resource-" + Date.now().toString(), // Use timestamp as unique ID with prefix
+        id: "resource-" + Date.now().toString(),
         dependencies: data.dependencies || [],
         customDependencies: data.customDependencies || [],
       }
 
-      // Check if this is a built-in project (1-5)
-      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(params.id)
+      const isBuiltInProject = ["1", "2", "3", "4", "5"].includes(unwrappedParams.id)
 
       if (isBuiltInProject) {
-        // For built-in projects, we'll just redirect back to the project page
-        // The project page will reload the mock data
-        router.push(`/projects/${params.id}`)
+        router.push(`/projects/${unwrappedParams.id}`)
         return
       }
 
-      // For custom projects, save to localStorage
       const storedProjects = JSON.parse(localStorage.getItem("terraformProjects") || "[]")
-      const projectIndex = storedProjects.findIndex((p: any) => p.id === params.id)
+      const projectIndex = storedProjects.findIndex((p: any) => p.id === unwrappedParams.id)
 
       if (projectIndex !== -1) {
-        // Add the new resource to the project's resources
         const updatedResources = [...(storedProjects[projectIndex].resources || []), newResource]
         storedProjects[projectIndex].resources = updatedResources
         storedProjects[projectIndex].updatedAt = "Just now"
 
-        // Update localStorage
         localStorage.setItem("terraformProjects", JSON.stringify(storedProjects))
         console.log("Resource added:", newResource)
 
-        // Redirect back to the project page
-        router.push(`/projects/${params.id}`)
+        router.push(`/projects/${unwrappedParams.id}`)
       } else {
         alert("Project not found. Please try again.")
       }
@@ -335,7 +322,7 @@ export default function AddResourcePage({ params }: { params: { id: string } }) 
     return (
       <div className="container max-w-4xl py-10">
         <div className="flex items-center gap-2 mb-8">
-          <Link href={`/projects/${params.id}`}>
+          <Link href={`/projects/${unwrappedParams.id}`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -353,7 +340,7 @@ export default function AddResourcePage({ params }: { params: { id: string } }) 
     return (
       <div className="container max-w-4xl py-10">
         <div className="flex items-center gap-2 mb-8">
-          <Link href={`/projects/${params.id}`}>
+          <Link href={`/projects/${unwrappedParams.id}`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -373,7 +360,7 @@ export default function AddResourcePage({ params }: { params: { id: string } }) 
   return (
     <div className="container max-w-4xl py-10 h-screen">
       <div className="flex items-center gap-2 mb-8">
-        <Link href={`/projects/${params.id}`}>
+        <Link href={`/projects/${unwrappedParams.id}`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>
